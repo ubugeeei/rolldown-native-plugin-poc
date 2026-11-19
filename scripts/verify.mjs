@@ -1,11 +1,14 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
+import process from "node:process";
 
 import { buildFixture, stableOutput } from "./build.mjs";
-import { comparableFrameworks, fixtureSizes } from "./frameworks.mjs";
+import { comparableFrameworks, selectedFixtureNames } from "./frameworks.mjs";
+
+const fixtures = selectedFixtureNames(process.env.BENCH_FIXTURES);
 
 for (const framework of comparableFrameworks) {
-  for (const size of Object.keys(fixtureSizes)) {
+  for (const size of fixtures) {
     const javascript = await buildFixture({
       framework: framework.name,
       path: "js",

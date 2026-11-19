@@ -5,10 +5,13 @@ import { resolve } from "node:path";
 import process from "node:process";
 import { performance } from "node:perf_hooks";
 
-import { comparableFrameworks, fixtureSizes } from "./frameworks.mjs";
+import { comparableFrameworks, fixtureSizes, selectedFixtureNames } from "./frameworks.mjs";
 
 const coldIterations = positiveInteger("BENCH_COLD_SAMPLES", 15);
 const warmIterations = positiveInteger("BENCH_WARM_SAMPLES", 30);
+const warmProcesses = Math.min(warmIterations, positiveInteger("BENCH_WARM_PROCESSES", 5));
+const bootstrapIterations = 10_000;
+const fixtures = selectedFixtureNames(process.env.BENCH_FIXTURES);
 
 function positiveInteger(name, fallback) {
   const value = process.env[name];
@@ -30,6 +33,14 @@ function command(commandName, args = []) {
     throw new Error(`${commandName} ${args.join(" ")} failed:\n${result.stderr || result.stdout}`);
   }
   return result.stdout.trim();
+}
+
+function repositoryDirty() {
+  const status = command("git", ["status", "--porcelain"]);
+  return status
+    .split("\n")
+    .filter(Boolean)
+    .some((line) => !line.slice(3).startsWith("benchmarks/results/"));
 }
 
 function worker(args) {
@@ -81,6 +92,47 @@ function statistics(values) {
   };
 }
 
+function randomGenerator(seed) {
+  let state = seed >>> 0;
+
+  return () => {
+    state += 0x6d2b79f5;
+    let value = state;
+    value = Math.imul(value ^ (value >>> 15), value | 1);
+    value ^= value + Math.imul(value ^ (value >>> 7), value | 61);
+    return ((value ^ (value >>> 14)) >>> 0) / 4_294_967_296;
+  };
+}
+
+function pairedSpeedup(javascriptSamples, nativeSamples) {
+  if (javascriptSamples.length !== nativeSamples.length) {
+    throw new Error("paired benchmark paths returned different sample counts");
+  }
+
+  const values = javascriptSamples.map(
+    (sample, index) => sample.buildMs / nativeSamples[index].buildMs,
+  );
+  const random = randomGenerator(0x726f6c6c ^ values.length);
+  const bootstrapMedians = [];
+
+  for (let iteration = 0; iteration < bootstrapIterations; iteration += 1) {
+    const resampled = Array.from(
+      { length: values.length },
+      () => values[Math.floor(random() * values.length)],
+    );
+    bootstrapMedians.push(statistics(resampled).median);
+  }
+
+  bootstrapMedians.sort((left, right) => left - right);
+  return {
+    confidence95: {
+      high: percentile(bootstrapMedians, 0.975),
+      low: percentile(bootstrapMedians, 0.025),
+    },
+    ...statistics(values),
+  };
+}
+
 function summarizeSamples(samples) {
   return {
     buildMs: statistics(samples.map((sample) => sample.buildMs)),
@@ -89,14 +141,9 @@ function summarizeSamples(samples) {
       ? statistics(samples.map((sample) => sample.processMs))
       : undefined,
     rssBytes: statistics(samples.map((sample) => sample.rssBytes)),
-    transformMs: statistics(samples.flatMap((sample) => sample.transformMs)),
-  };
-}
-
-function ratio(javascript, native) {
-  return {
-    nativeChangePercent: (native / javascript - 1) * 100,
-    speedup: javascript / native,
+    transformMs: statistics(
+      samples.flatMap((sample) => (sample.transformMs === null ? [] : [sample.transformMs])),
+    ),
   };
 }
 
@@ -110,19 +157,29 @@ function markdown(results) {
     "",
     `Generated at ${results.metadata.timestamp}. Lower is better.`,
     "",
-    "| Framework | Fixture | Mode | JS median | Native median | Native change | Speedup |",
-    "| --- | --- | --- | ---: | ---: | ---: | ---: |",
+    "| Framework | Fixture | Modules | Mode | JS median | Native median | Paired speedup | 95% CI |",
+    "| --- | --- | ---: | --- | ---: | ---: | ---: | ---: |",
   ];
+
+  if (results.metadata.fixtures.max !== undefined) {
+    lines.splice(
+      3,
+      0,
+      "The 100,000-component `max` fixture is an intentionally non-realistic stress limit.",
+      "",
+    );
+  }
 
   for (const result of results.cases) {
     for (const mode of ["cold", "warm"]) {
       const javascript = result[mode].summary.js.buildMs.median;
       const native = result[mode].summary.native.buildMs.median;
-      const comparison = ratio(javascript, native);
+      const speedup = result[mode].pairedBuildSpeedup;
       lines.push(
-        `| ${result.framework} | ${result.size} | ${mode} | ` +
+        `| ${result.framework} | ${result.size} | ${fixtureSizes[result.size]} | ${mode} | ` +
           `${fixed(javascript)} ms | ${fixed(native)} ms | ` +
-          `${fixed(comparison.nativeChangePercent)}% | ${fixed(comparison.speedup)}x |`,
+          `${fixed(speedup.median)}x | ` +
+          `${fixed(speedup.confidence95.low)}–${fixed(speedup.confidence95.high)}x |`,
       );
     }
   }
@@ -133,7 +190,8 @@ function markdown(results) {
     "<summary>Method and environment</summary>",
     "",
     `- Cold samples: ${results.metadata.iterations.cold} new Node.js processes per path.`,
-    `- Warm samples: ${results.metadata.iterations.warm} builds per path in one reused process, interleaved by path.`,
+    `- Warm samples: ${results.metadata.iterations.warm} builds per path across ${results.metadata.iterations.warmProcesses} processes. Each process is warmed once; paths are interleaved.`,
+    `- Paired speedup is the median of adjacent JS/native ratios. The interval is a deterministic ${bootstrapIterations.toLocaleString("en-US")}-resample paired bootstrap CI.`,
     "- Native build time is excluded; plugin package resolution and library loading are included.",
     "- Every JS/native fixture pair was byte-verified before measurement.",
     `- Platform: ${results.metadata.platform} ${results.metadata.arch}.`,
@@ -153,7 +211,7 @@ if (process.env.BENCH_SKIP_VERIFY !== "1") {
 
 const cases = [];
 for (const framework of comparableFrameworks) {
-  for (const size of Object.keys(fixtureSizes)) {
+  for (const size of fixtures) {
     const cold = { js: [], native: [] };
     for (let index = 0; index < coldIterations; index += 1) {
       const order = index % 2 === 0 ? ["js", "native"] : ["native", "js"];
@@ -162,9 +220,27 @@ for (const framework of comparableFrameworks) {
       }
     }
 
-    const warm = worker(["warm-pair", framework.name, size, String(warmIterations)]);
+    const warm = { js: [], native: [] };
+    for (let processIndex = 0; processIndex < warmProcesses; processIndex += 1) {
+      const processIterations =
+        Math.floor(warmIterations / warmProcesses) +
+        (processIndex < warmIterations % warmProcesses ? 1 : 0);
+      const processSamples = worker(["warm-pair", framework.name, size, String(processIterations)]);
+
+      for (const path of ["js", "native"]) {
+        warm[path].push(
+          ...processSamples[path].map((sample, pairIndex) => ({
+            ...sample,
+            pairIndex,
+            processIndex,
+          })),
+        );
+      }
+    }
+
     const result = {
       cold: {
+        pairedBuildSpeedup: pairedSpeedup(cold.js, cold.native),
         samples: cold,
         summary: {
           js: summarizeSamples(cold.js),
@@ -174,6 +250,7 @@ for (const framework of comparableFrameworks) {
       framework: framework.name,
       size,
       warm: {
+        pairedBuildSpeedup: pairedSpeedup(warm.js, warm.native),
         samples: warm,
         summary: {
           js: summarizeSamples(warm.js),
@@ -204,11 +281,13 @@ const results = {
     iterations: {
       cold: coldIterations,
       warm: warmIterations,
+      warmProcesses,
     },
+    fixtures: Object.fromEntries(fixtures.map((name) => [name, fixtureSizes[name]])),
     memoryBytes: totalmem(),
     platform: process.platform,
     revisions: {
-      dirty: command("git", ["status", "--porcelain"]).length > 0,
+      dirty: repositoryDirty(),
       repository: command("git", ["rev-parse", "HEAD"]),
       rolldown: command("git", ["-C", "rolldown", "rev-parse", "HEAD"]),
     },

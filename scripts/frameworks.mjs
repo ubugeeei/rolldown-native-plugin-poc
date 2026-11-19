@@ -34,6 +34,22 @@ export const comparableFrameworks = [
 ];
 
 export const fixtureSizes = {
-  large: 256,
+  large: 2000,
+  max: 100_000,
+  medium: 500,
   small: 8,
 };
+
+export const defaultFixtureNames = ["small", "medium", "large"];
+
+export function selectedFixtureNames(value) {
+  if (value === undefined || value.length === 0) return defaultFixtureNames;
+
+  const names = [...new Set(value.split(",").map((name) => name.trim()))];
+  for (const name of names) {
+    if (!(name in fixtureSizes)) {
+      throw new Error(`Unknown fixture: ${name}`);
+    }
+  }
+  return names;
+}

@@ -32,10 +32,10 @@ React remains in the repository so the blocker, fixtures, and future integration
 ## Methodology
 
 - Compiler versions and source revisions are pinned.
-- Small and large fixtures are generated deterministically and shared by both paths.
+- Small (8 components), medium (500), and large (2,000) fixtures are generated deterministically and shared by both paths.
 - Every pair is verified before it is timed. A mismatch invalidates the result.
-- Cold measurements use a new Node process. Warm measurements reuse a process but create a fresh Rolldown build.
-- Results report all samples plus median, mean, standard deviation, p95, and `process.resourceUsage().maxRSS`.
+- Cold measurements use a new Node process. Warm measurements are split across five processes; each is warmed once and creates a fresh Rolldown build per sample.
+- JavaScript and native samples are adjacent pairs with alternating order. Results report a paired median speedup with a 95% bootstrap confidence interval, plus the raw samples and descriptive statistics.
 - Native library build time is excluded. Plugin discovery and loading are included in cold and warm build wall time.
 - No result is described as a framework-wide speedup; the benchmark isolates this compiler-plugin boundary.
 
@@ -66,5 +66,16 @@ nix develop
 pnpm verify
 pnpm benchmark
 ```
+
+An intentionally non-realistic 100,000-component workload is opt-in so normal
+bootstrap and verification do not create half a million fixture files:
+
+```sh
+FIXTURE_SIZES=max pnpm fixtures
+BENCH_FIXTURES=max BENCH_COLD_SAMPLES=1 BENCH_WARM_SAMPLES=1 pnpm benchmark
+```
+
+The `max` result is a stress limit, not evidence for a representative web
+application and is never included in aggregate claims.
 
 The native plugins are trusted in-process code. This repository only loads libraries built from its pinned source dependencies.

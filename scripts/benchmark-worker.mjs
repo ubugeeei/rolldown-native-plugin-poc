@@ -4,12 +4,20 @@ import { performance } from "node:perf_hooks";
 import { buildFixture } from "./build.mjs";
 
 function createMetrics() {
-  const transformMs = [];
+  let transformCount = 0;
+  let transformMs = 0;
+
   return {
     record(duration) {
-      transformMs.push(duration);
+      transformCount += 1;
+      transformMs += duration;
     },
-    transformMs,
+    snapshot() {
+      return {
+        transformCount,
+        transformMs: transformCount === 0 ? null : transformMs,
+      };
+    },
   };
 }
 
@@ -22,7 +30,7 @@ async function measure(framework, path, size) {
     buildMs: performance.now() - startedAt,
     maxRssKiB: process.resourceUsage().maxRSS,
     rssBytes: process.memoryUsage.rss(),
-    transformMs: metrics.transformMs,
+    ...metrics.snapshot(),
   };
 }
 

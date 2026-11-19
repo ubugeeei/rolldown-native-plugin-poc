@@ -1,7 +1,8 @@
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
+import process from "node:process";
 
-import { comparableFrameworks, fixtureSizes } from "./frameworks.mjs";
+import { comparableFrameworks, fixtureSizes, selectedFixtureNames } from "./frameworks.mjs";
 
 function componentSource(framework, index) {
   const label = `Component ${index}`;
@@ -30,13 +31,21 @@ async function generateProject(framework, size, count) {
 
   const imports = [];
   const references = [];
+  const writes = [];
   for (let index = 0; index < count; index += 1) {
     const identifier = `Component${index}`;
     const filename = `${identifier}${framework.extension}`;
     imports.push(`import ${identifier} from './${filename}';`);
     references.push(identifier);
-    await writeFile(resolve(sourceDirectory, filename), componentSource(framework.name, index));
+    writes.push(
+      writeFile(resolve(sourceDirectory, filename), componentSource(framework.name, index)),
+    );
+    if (writes.length === 256) {
+      await Promise.all(writes);
+      writes.length = 0;
+    }
   }
+  await Promise.all(writes);
 
   const entry = `${imports.join("\n")}\n\nexport const components = [\n  ${references.join(",\n  ")},\n];\n`;
   await writeFile(resolve(sourceDirectory, "entry.js"), entry);
@@ -47,9 +56,10 @@ async function generateProject(framework, size, count) {
 }
 
 const fixtureFrameworks = [...comparableFrameworks, { extension: ".jsx", name: "react" }];
+const fixtures = selectedFixtureNames(process.env.FIXTURE_SIZES);
 
 for (const framework of fixtureFrameworks) {
-  for (const [size, count] of Object.entries(fixtureSizes)) {
-    await generateProject(framework, size, count);
+  for (const size of fixtures) {
+    await generateProject(framework, size, fixtureSizes[size]);
   }
 }
