@@ -1,0 +1,7 @@
+/node_modules/
+/target/
+/.cache/
+/benchmarks/results/
+/consumers/*/fixtures/
+/rolldown/node_modules/
+*.log

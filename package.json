@@ -1,0 +1,27 @@
+{
+  "name": "rolldown-native-plugin-poc",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.34.7",
+  "scripts": {
+    "setup": "node scripts/setup.mjs",
+    "fixtures": "node scripts/generate-fixtures.mjs",
+    "build:native": "cargo build --workspace --release",
+    "verify": "node scripts/verify.mjs",
+    "benchmark": "node scripts/benchmark.mjs"
+  },
+  "dependencies": {
+    "@astrojs/compiler-rs": "0.5.3",
+    "@rsvelte/vite-plugin-svelte-native": "0.3.19",
+    "@solidjs/compiler": "2.0.2",
+    "@vizejs/native": "0.783.0",
+    "babel-plugin-react-compiler": "1.0.0",
+    "rolldown": "link:./rolldown/packages/rolldown"
+  },
+  "devDependencies": {
+    "@poc/astro-native": "workspace:*",
+    "@poc/rsvelte-native": "workspace:*",
+    "@poc/solid-native": "workspace:*",
+    "@poc/vize-native": "workspace:*"
+  }
+}

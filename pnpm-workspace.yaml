@@ -1,0 +1,9 @@
+packages:
+  - consumers/*/js
+  - consumers/*/native
+
+onlyBuiltDependencies:
+  - '@astrojs/compiler-rs'
+  - '@rsvelte/vite-plugin-svelte-native'
+  - '@solidjs/compiler'
+  - '@vizejs/native'

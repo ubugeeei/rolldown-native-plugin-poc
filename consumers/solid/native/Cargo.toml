@@ -1,0 +1,12 @@
+[package]
+name = "solid_native_plugin"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+rolldown_plugin_native_abi = { workspace = true }
+solidjs-compiler = { git = "https://github.com/solidjs/solid.git", rev = "7f86b2dee029a82be946918fcaa248ce52d1a96d", default-features = false }

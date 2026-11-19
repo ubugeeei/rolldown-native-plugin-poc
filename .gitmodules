@@ -1,0 +1,4 @@
+[submodule "rolldown"]
+	path = rolldown
+	url = https://github.com/ubugeeei/rolldown.git
+	branch = feat/native-plugin-abi

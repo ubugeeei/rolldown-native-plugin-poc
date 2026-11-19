@@ -1,0 +1,9 @@
+{
+  "name": "@poc/solid-native",
+  "private": true,
+  "version": "0.0.0",
+  "rolldown": {
+    "abi": 1,
+    "devBinary": "./dist/solid_native_plugin"
+  }
+}
