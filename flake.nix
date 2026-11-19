@@ -54,9 +54,27 @@
             RUST_BACKTRACE = "1";
 
             shellHook = ''
+              export PNPM_HOME="$PWD/.cache/pnpm-home"
               export npm_config_store_dir="$PWD/.cache/pnpm-store"
+              export npm_config_cache="$PWD/.cache/npm"
+              export npm_config_userconfig="$PWD/.cache/npmrc"
+              export npm_config_manage_package_manager_versions=false
               export CARGO_HOME="$PWD/.cache/cargo-home"
-              mkdir -p "$npm_config_store_dir" "$CARGO_HOME"
+              export GOCACHE="$PWD/.cache/go-build"
+              export GOMODCACHE="$PWD/.cache/go-mod"
+              export ZIG_GLOBAL_CACHE_DIR="$PWD/.cache/zig"
+              export PLAYWRIGHT_BROWSERS_PATH="$PWD/.cache/ms-playwright"
+
+              mkdir -p \
+                "$PNPM_HOME" \
+                "$npm_config_store_dir" \
+                "$npm_config_cache" \
+                "$CARGO_HOME" \
+                "$GOCACHE" \
+                "$GOMODCACHE" \
+                "$ZIG_GLOBAL_CACHE_DIR" \
+                "$PLAYWRIGHT_BROWSERS_PATH"
+              touch "$npm_config_userconfig"
             '';
           };
         });

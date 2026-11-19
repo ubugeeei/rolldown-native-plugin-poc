@@ -2,6 +2,8 @@
 /target/
 /.cache/
 /benchmarks/results/
+/benchmarks/outputs/
 /consumers/*/fixtures/
+/consumers/*/native/dist/
 /rolldown/node_modules/
 *.log

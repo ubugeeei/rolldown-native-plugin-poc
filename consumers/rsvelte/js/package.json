@@ -1,0 +1,5 @@
+{
+  "name": "@poc/rsvelte-js",
+  "private": true,
+  "type": "module"
+}

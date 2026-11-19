@@ -1,0 +1,19 @@
+[package]
+name = "astro_native_plugin"
+version = "0.0.0"
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+rust-version.workspace = true
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+astro_codegen = { git = "https://github.com/withastro/compiler-rs.git", rev = "c9bf179f77439e427a98751569d2af42ff85d78c" }
+oxc_allocator = { git = "https://github.com/withastro/oxc", rev = "e5e100abf1afb9a79ae22f97de32befe4b925d5d" }
+oxc_parser = { git = "https://github.com/withastro/oxc", rev = "e5e100abf1afb9a79ae22f97de32befe4b925d5d", features = [
+  "astro",
+] }
+oxc_span = { git = "https://github.com/withastro/oxc", rev = "e5e100abf1afb9a79ae22f97de32befe4b925d5d" }
+rolldown_plugin_native_abi = { workspace = true }

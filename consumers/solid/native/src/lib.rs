@@ -1,5 +1,5 @@
 use rolldown_plugin_native_abi::{
-    register_plugin, HookUsage, NativePlugin, PluginContext, TransformArgs, TransformOutput,
+    HookUsage, NativePlugin, PluginContext, TransformArgs, TransformOutput, register_plugin,
 };
 use solidjs_compiler::{CompileOptions, compile};
 

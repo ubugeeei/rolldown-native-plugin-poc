@@ -21,10 +21,10 @@ scripts/                   fixture, verification, and benchmark harnesses
 
 | Consumer | JavaScript path | Native path | Comparable |
 | --- | --- | --- | --- |
-| Solid | `@solidjs/compiler` Node-API binding | `solidjs-compiler::compile` | in progress |
-| Astro | `@astrojs/compiler-rs` Node-API binding | `astro_codegen` with the same parser revision | in progress |
-| Vize | `@vizejs/native` Node-API binding | `vize_atelier_sfc` | in progress |
-| RSvelte | `@rsvelte/vite-plugin-svelte-native` Node-API binding | `rsvelte` core at the matching release tag | in progress |
+| Solid | `@solidjs/compiler` Node-API binding | `solidjs-compiler::compile` | byte-identical |
+| Astro | `@astrojs/compiler-rs` Node-API binding | `astro_codegen` with the same parser revision | byte-identical |
+| Vize | `@vizejs/native` Node-API binding | `vize_atelier_sfc` | byte-identical |
+| RSvelte | `@rsvelte/vite-plugin-svelte-native` Node-API binding | `rsvelte` core at the matching release tag | byte-identical |
 | React | `babel-plugin-react-compiler` | official Rust port | blocked upstream: Rust code generation is not implemented yet |
 
 React remains in the repository so the blocker, fixtures, and future integration are reviewable. It is not included in aggregate performance claims until both paths can produce equivalent output.
@@ -47,13 +47,24 @@ Nix with flakes enabled is the only host requirement. The development shell
 provides the pinned Node.js, pnpm, Rust, C/C++, Go, Zig, CMake, Ninja, and
 benchmarking toolchains on macOS and Linux.
 
+Bootstrap the complete repository with one command:
+
+```sh
+nix develop --command pnpm run bootstrap
+```
+
+This initializes the pinned Rolldown submodule, installs both dependency trees,
+builds Rolldown and every native plugin, and generates the benchmark fixtures.
+Toolchain and package-manager caches stay under `.cache/`; no user-level Node,
+pnpm, Rust, C/C++, Go, or Zig installation is required.
+
+For interactive work, enter the same pinned environment and run verification or
+benchmarks directly:
+
 ```sh
 nix develop
-pnpm setup
 pnpm verify
 pnpm benchmark
 ```
-
-`nix develop` provides the pinned Node.js, pnpm, Rust, C/C++, Go, Zig, CMake, and benchmark tooling. No host toolchain installation is required. The same commands can run non-interactively with `nix develop -c <command>`.
 
 The native plugins are trusted in-process code. This repository only loads libraries built from its pinned source dependencies.

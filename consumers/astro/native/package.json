@@ -1,0 +1,9 @@
+{
+  "name": "@poc/astro-native",
+  "version": "0.0.0",
+  "private": true,
+  "rolldown": {
+    "abi": 1,
+    "devBinary": "./dist/astro_native_plugin"
+  }
+}

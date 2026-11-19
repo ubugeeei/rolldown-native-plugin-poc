@@ -1,0 +1,9 @@
+{
+  "name": "@poc/rsvelte-native",
+  "version": "0.0.0",
+  "private": true,
+  "rolldown": {
+    "abi": 1,
+    "devBinary": "./dist/rsvelte_native_plugin"
+  }
+}

@@ -4,9 +4,12 @@
   "type": "module",
   "packageManager": "pnpm@10.34.7",
   "scripts": {
-    "setup": "node scripts/setup.mjs",
+    "bootstrap": "node scripts/bootstrap.mjs",
     "fixtures": "node scripts/generate-fixtures.mjs",
     "build:native": "cargo build --workspace --release",
+    "stage:native": "node scripts/stage-native-libraries.mjs",
+    "format": "oxfmt --write scripts consumers",
+    "format:check": "oxfmt --check scripts consumers",
     "verify": "node scripts/verify.mjs",
     "benchmark": "node scripts/benchmark.mjs"
   },
@@ -22,6 +25,7 @@
     "@poc/astro-native": "workspace:*",
     "@poc/rsvelte-native": "workspace:*",
     "@poc/solid-native": "workspace:*",
-    "@poc/vize-native": "workspace:*"
+    "@poc/vize-native": "workspace:*",
+    "oxfmt": "0.78.0"
   }
 }
