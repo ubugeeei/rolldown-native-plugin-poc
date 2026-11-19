@@ -1,7 +1,6 @@
 /node_modules/
 /target/
 /.cache/
-/benchmarks/results/
 /benchmarks/outputs/
 /consumers/*/fixtures/
 /consumers/*/native/dist/
