@@ -117,6 +117,11 @@ function pairedSpeedup(javascriptSamples, nativeSamples) {
   const values = javascriptSamples.map(
     (sample, index) => sample.buildMs / nativeSamples[index].buildMs,
   );
+  const summary = statistics(values);
+  if (values.length < 2) {
+    return { confidence95: null, ...summary };
+  }
+
   const random = randomGenerator(0x726f6c6c ^ values.length);
   const bootstrapMedians = [];
 
@@ -134,7 +139,7 @@ function pairedSpeedup(javascriptSamples, nativeSamples) {
       high: percentile(bootstrapMedians, 0.975),
       low: percentile(bootstrapMedians, 0.025),
     },
-    ...statistics(values),
+    ...summary,
   };
 }
 
@@ -154,6 +159,10 @@ function summarizeSamples(samples) {
 
 function fixed(value) {
   return value.toFixed(2);
+}
+
+function plural(count, singular) {
+  return count === 1 ? singular : `${singular}s`;
 }
 
 function markdown(results) {
@@ -180,11 +189,14 @@ function markdown(results) {
       const javascript = result[mode].summary.js.buildMs.median;
       const native = result[mode].summary.native.buildMs.median;
       const speedup = result[mode].pairedBuildSpeedup;
+      const confidence =
+        speedup.confidence95 === null
+          ? "n/a"
+          : `${fixed(speedup.confidence95.low)}–${fixed(speedup.confidence95.high)}x`;
       lines.push(
         `| ${result.framework} | ${result.size} | ${fixtureSizes[result.size]} | ${mode} | ` +
           `${fixed(javascript)} ms | ${fixed(native)} ms | ` +
-          `${fixed(speedup.median)}x | ` +
-          `${fixed(speedup.confidence95.low)}–${fixed(speedup.confidence95.high)}x |`,
+          `${fixed(speedup.median)}x | ${confidence} |`,
       );
     }
   }
@@ -194,9 +206,9 @@ function markdown(results) {
     "<details>",
     "<summary>Method and environment</summary>",
     "",
-    `- Cold samples: ${results.metadata.iterations.cold} new Node.js processes per path.`,
-    `- Warm samples: ${results.metadata.iterations.warm} builds per path across ${results.metadata.iterations.warmProcesses} processes. Each process is warmed once; paths are interleaved.`,
-    `- Paired speedup is the median of adjacent JS/native ratios. The interval is a deterministic ${bootstrapIterations.toLocaleString("en-US")}-resample paired bootstrap CI.`,
+    `- Cold samples: ${results.metadata.iterations.cold} new Node.js ${plural(results.metadata.iterations.cold, "process")} per path.`,
+    `- Warm samples: ${results.metadata.iterations.warm} ${plural(results.metadata.iterations.warm, "build")} per path across ${results.metadata.iterations.warmProcesses} ${plural(results.metadata.iterations.warmProcesses, "process")}. Each process is warmed once; paths are interleaved.`,
+    `- Paired speedup is the median of adjacent JS/native ratios. With two or more pairs, the interval is a deterministic ${bootstrapIterations.toLocaleString("en-US")}-resample paired bootstrap CI.`,
     "- Native build time is excluded; plugin package resolution and library loading are included.",
     "- Every JS/native fixture pair was byte-verified before measurement.",
     `- Platform: ${results.metadata.platform} ${results.metadata.arch}.`,
