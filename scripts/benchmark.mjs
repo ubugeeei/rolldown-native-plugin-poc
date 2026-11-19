@@ -12,6 +12,11 @@ const warmIterations = positiveInteger("BENCH_WARM_SAMPLES", 30);
 const warmProcesses = Math.min(warmIterations, positiveInteger("BENCH_WARM_PROCESSES", 5));
 const bootstrapIterations = 10_000;
 const fixtures = selectedFixtureNames(process.env.BENCH_FIXTURES);
+const resultName = process.env.BENCH_RESULT_NAME ?? "latest";
+
+if (!/^[a-z0-9][a-z0-9-]*$/u.test(resultName)) {
+  throw new Error("BENCH_RESULT_NAME must contain only lowercase letters, digits, and hyphens");
+}
 
 function positiveInteger(name, fallback) {
   const value = process.env[name];
@@ -24,7 +29,7 @@ function positiveInteger(name, fallback) {
   return parsed;
 }
 
-function command(commandName, args = []) {
+function command(commandName, args = [], options = {}) {
   const result = spawnSync(commandName, args, {
     encoding: "utf8",
     maxBuffer: 16 * 1024 * 1024,
@@ -32,11 +37,11 @@ function command(commandName, args = []) {
   if (result.status !== 0) {
     throw new Error(`${commandName} ${args.join(" ")} failed:\n${result.stderr || result.stdout}`);
   }
-  return result.stdout.trim();
+  return options.trim === false ? result.stdout : result.stdout.trim();
 }
 
 function repositoryDirty() {
-  const status = command("git", ["status", "--porcelain"]);
+  const status = command("git", ["status", "--porcelain"], { trim: false });
   return status
     .split("\n")
     .filter(Boolean)
@@ -300,6 +305,11 @@ const results = {
   },
 };
 const outputDirectory = resolve("benchmarks", "results");
+const summaryName = resultName === "latest" ? "summary.md" : `${resultName}-summary.md`;
+
 await mkdir(outputDirectory, { recursive: true });
-await writeFile(resolve(outputDirectory, "latest.json"), `${JSON.stringify(results, null, 2)}\n`);
-await writeFile(resolve(outputDirectory, "summary.md"), markdown(results));
+await writeFile(
+  resolve(outputDirectory, `${resultName}.json`),
+  `${JSON.stringify(results, null, 2)}\n`,
+);
+await writeFile(resolve(outputDirectory, summaryName), markdown(results));

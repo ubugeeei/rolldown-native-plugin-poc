@@ -72,10 +72,16 @@ bootstrap and verification do not create half a million fixture files:
 
 ```sh
 FIXTURE_SIZES=max pnpm fixtures
-BENCH_FIXTURES=max BENCH_COLD_SAMPLES=1 BENCH_WARM_SAMPLES=1 pnpm benchmark
+BENCH_FIXTURES=max \
+  BENCH_RESULT_NAME=max \
+  BENCH_COLD_SAMPLES=1 \
+  BENCH_WARM_SAMPLES=1 \
+  pnpm benchmark
 ```
 
 The `max` result is a stress limit, not evidence for a representative web
-application and is never included in aggregate claims.
+application and is never included in aggregate claims. It is written separately
+to `benchmarks/results/max.json` and `max-summary.md`; React is omitted because
+its Rust compiler port does not yet provide code generation.
 
 The native plugins are trusted in-process code. This repository only loads libraries built from its pinned source dependencies.

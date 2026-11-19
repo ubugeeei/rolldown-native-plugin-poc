@@ -60,6 +60,9 @@ const fixtures = selectedFixtureNames(process.env.FIXTURE_SIZES);
 
 for (const framework of fixtureFrameworks) {
   for (const size of fixtures) {
+    if (framework.name === "react" && size === "max") {
+      continue;
+    }
     await generateProject(framework, size, fixtureSizes[size]);
   }
 }
